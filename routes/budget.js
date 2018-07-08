@@ -20,8 +20,9 @@ router.get('/', async (req, res) => {
   try {
     const data =
       await db.each(`
-        SELECT agencyname, agencyid, SUM(amount)::numeric as total
-        FROM budget_objects
+        SELECT agencyname, agencyid, SUM(adopted_budget_amount)::numeric as total
+        FROM budget_opendata
+        WHERE publicationdate = '20180614'
         GROUP BY agencyname, agencyid
         ORDER BY total DESC
       `, [], (d) => { d.total = parseInt(d.total); });
@@ -42,9 +43,10 @@ router.get('/agency/:agencyid', async (req, res) => {
   try {
     const data =
       await db.each(`
-        SELECT uoaname, uoaid, SUM(amount)::numeric as total
-        FROM budget_objects
+        SELECT uoaname, uoaid, SUM(adopted_budget_amount)::numeric as total
+        FROM budget_opendata
         WHERE agencyid = $1
+        AND publicationdate = '20180614'
         GROUP BY uoaname, uoaid
         ORDER BY total DESC
       `, agencyid, (d) => { d.total = parseInt(d.total); });
@@ -65,10 +67,11 @@ router.get('/agency/:agencyid/uoa/:uoaid', async (req, res) => {
   try {
     const data =
       await db.each(`
-        SELECT responsibilitycentername, responsibilitycenterid, SUM(amount)::numeric as total
-        FROM budget_objects
+        SELECT responsibilitycentername, responsibilitycenterid, SUM(adopted_budget_amount)::numeric as total
+        FROM budget_opendata
         WHERE agencyid = $1
         AND uoaid = $2
+        AND publicationdate = '20180614'
         GROUP BY responsibilitycentername, responsibilitycenterid
         ORDER BY total DESC
       `, [agencyid, uoaid], (d) => { d.total = parseInt(d.total); });
@@ -89,11 +92,12 @@ router.get('/agency/:agencyid/uoa/:uoaid/responsibilitycenter/:responsibilitycen
   try {
     const data =
       await db.each(`
-        SELECT budgetcodename, budgetcodeid, SUM(amount)::numeric as total
-        FROM budget_objects
+        SELECT budgetcodename, budgetcodeid, SUM(adopted_budget_amount)::numeric as total
+        FROM budget_opendata
         WHERE agencyid = $1
         AND uoaid = $2
         AND responsibilitycenterid = $3
+        AND publicationdate = '20180614'
         GROUP BY budgetcodename, budgetcodeid
         ORDER BY total DESC
       `, [agencyid, uoaid, responsibilitycenterid], (d) => { d.total = parseInt(d.total); });
@@ -114,12 +118,13 @@ router.get('/agency/:agencyid/uoa/:uoaid/responsibilitycenter/:responsibilitycen
   try {
     const data =
       await db.each(`
-        SELECT objectclassname, objectclassid, SUM(amount)::numeric as total
-        FROM budget_objects
+        SELECT objectclassname, objectclassid, SUM(adopted_budget_amount)::numeric as total
+        FROM budget_opendata
         WHERE agencyid = $1
         AND uoaid = $2
         AND responsibilitycenterid = $3
         AND budgetcodeid = $4
+        AND publicationdate = '20180614'
         GROUP BY objectclassname, objectclassid
         ORDER BY total DESC
       `, [agencyid, uoaid, responsibilitycenterid, budgetcodeid], (d) => { d.total = parseInt(d.total); });
