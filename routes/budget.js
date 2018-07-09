@@ -20,7 +20,11 @@ router.get('/', async (req, res) => {
   try {
     const data =
       await db.each(`
-        SELECT agencyname, agencyid, SUM(adopted_budget_amount)::numeric as total
+        SELECT
+          'agency' as type,
+          agencyname as name,
+          agencyid as id,
+          SUM(adopted_budget_amount)::numeric as total
         FROM budget_opendata
         WHERE publicationdate = '20180614'
         GROUP BY agencyname, agencyid
@@ -43,7 +47,11 @@ router.get('/agency/:agencyid', async (req, res) => {
   try {
     const data =
       await db.each(`
-        SELECT uoaname, uoaid, SUM(adopted_budget_amount)::numeric as total
+        SELECT
+          'uoa' as type,
+          uoaname as name,
+          uoaid as id,
+          SUM(adopted_budget_amount)::numeric as total
         FROM budget_opendata
         WHERE agencyid = $1
         AND publicationdate = '20180614'
@@ -67,7 +75,11 @@ router.get('/agency/:agencyid/uoa/:uoaid', async (req, res) => {
   try {
     const data =
       await db.each(`
-        SELECT responsibilitycentername, responsibilitycenterid, SUM(adopted_budget_amount)::numeric as total
+        SELECT
+          'responsibilitycenter' as type,
+          responsibilitycentername as name,
+          responsibilitycenterid as id,
+          SUM(adopted_budget_amount)::numeric as total
         FROM budget_opendata
         WHERE agencyid = $1
         AND uoaid = $2
@@ -88,15 +100,22 @@ router.get('/agency/:agencyid/uoa/:uoaid', async (req, res) => {
 
 router.get('/agency/:agencyid/uoa/:uoaid/responsibilitycenter/:responsibilitycenterid', async (req, res) => {
   const { agencyid, uoaid, responsibilitycenterid } = req.params;
+  console.log('rescenter', responsibilitycenterid)
+
+  const responsibilitycenterWherePartial = (responsibilitycenterid === null) ? 'AND responsibilitycenterid = $3' : 'AND responsibilitycenterid IS NULL';
 
   try {
     const data =
       await db.each(`
-        SELECT budgetcodename, budgetcodeid, SUM(adopted_budget_amount)::numeric as total
+        SELECT
+          'budgetcode' as type,
+          budgetcodename as name,
+          budgetcodeid as id,
+          SUM(adopted_budget_amount)::numeric as total
         FROM budget_opendata
         WHERE agencyid = $1
         AND uoaid = $2
-        AND responsibilitycenterid = $3
+        ${responsibilitycenterWherePartial}
         AND publicationdate = '20180614'
         GROUP BY budgetcodename, budgetcodeid
         ORDER BY total DESC
@@ -118,7 +137,11 @@ router.get('/agency/:agencyid/uoa/:uoaid/responsibilitycenter/:responsibilitycen
   try {
     const data =
       await db.each(`
-        SELECT objectclassname, objectclassid, SUM(adopted_budget_amount)::numeric as total
+        SELECT
+          'objectclass' as type,
+          objectclassname as name,
+          objectclassid as id,
+          SUM(adopted_budget_amount)::numeric as total
         FROM budget_opendata
         WHERE agencyid = $1
         AND uoaid = $2
