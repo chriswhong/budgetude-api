@@ -1,5 +1,5 @@
 const express = require('express');
-const logger = require('morgan');
+// const logger = require('morgan');
 require('dotenv').config();
 
 const budget = require('./routes/budget');
@@ -13,7 +13,7 @@ app.all('*', (req, res, next) => {
   next();
 });
 
-app.use(logger('dev'));
+// app.use(logger('dev'));
 
 // import routes
 app.use('/budget', budget);
