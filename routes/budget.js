@@ -27,7 +27,7 @@ const budgetQuery = sql('../queries/budget.sql');
 /* GET / */
 router.get('/', async (req, res) => {
   try {
-    const data =
+    const children =
       await db.each(budgetQuery, {
         type: 'agency',
         nameColumn: 'agencyname',
@@ -39,7 +39,11 @@ router.get('/', async (req, res) => {
       }, (d) => { d.total = parseInt(d.total); });
 
     // send the response with a tile template
-    res.send(data);
+    res.send({
+      id: 0,
+      name: 'New York City',
+      children,
+    });
   } catch (e) {
     res.status(404).send({
       error: e.toString(),
@@ -52,7 +56,10 @@ router.get('/agency/:agencyid', async (req, res) => {
   console.log(agencyid, typeof(agencyid))
 
   try {
-    const data =
+    const { agencyname } =
+      await db.one(`SELECT agencyname FROM budget_opendata WHERE agencyid = '${agencyid}' LIMIT 1`);
+
+    const children =
       await db.each(budgetQuery, {
         type: 'uoa',
         nameColumn: 'uoaname',
@@ -64,7 +71,11 @@ router.get('/agency/:agencyid', async (req, res) => {
       }, (d) => { d.total = parseInt(d.total); });
 
     // send the response with a tile template
-    res.send(data);
+    res.send({
+      id: agencyid,
+      name: agencyname,
+      children,
+    });
   } catch (e) {
     res.status(404).send({
       error: e.toString(),
@@ -76,7 +87,10 @@ router.get('/agency/:agencyid/uoa/:uoaid', async (req, res) => {
   const { agencyid, uoaid } = req.params;
 
   try {
-    const data =
+    const { uoaname } =
+      await db.one(`SELECT uoaname FROM budget_opendata WHERE agencyid = '${agencyid}' AND uoaid = '${uoaid}' LIMIT 1`);
+
+    const children =
       await db.each(budgetQuery, {
         type: 'responsibilitycenter',
         nameColumn: 'responsibilitycentername',
@@ -87,8 +101,11 @@ router.get('/agency/:agencyid/uoa/:uoaid', async (req, res) => {
         budgetcodePartial: '',
       }, (d) => { d.total = parseInt(d.total); });
 
-    // send the response with a tile template
-    res.send(data);
+    res.send({
+      id: uoaid,
+      name: uoaname,
+      children,
+    });
   } catch (e) {
     res.status(404).send({
       error: e.toString(),
@@ -96,16 +113,19 @@ router.get('/agency/:agencyid/uoa/:uoaid', async (req, res) => {
   }
 });
 
-const getResponsibilitycenterPartial = (id) => {
+const getResponsibilitycenterPartial = id => { // eslint-disable-line
   return (id !== 'unnamed') ? `AND responsibilitycenterid = '${id}'` : 'AND responsibilitycenterid IS NULL';
-}
+};
 
 router.get('/agency/:agencyid/uoa/:uoaid/responsibilitycenter/:responsibilitycenterid', async (req, res) => {
   const { agencyid, uoaid, responsibilitycenterid } = req.params;
   const responsibilitycenterPartial = getResponsibilitycenterPartial(responsibilitycenterid);
 
   try {
-    const data =
+    const { responsibilitycentername } =
+      await db.one(`SELECT responsibilitycentername FROM budget_opendata WHERE agencyid = '${agencyid}' AND uoaid = '${uoaid}' ${responsibilitycenterPartial} LIMIT 1`);
+
+    const children =
       await db.each(budgetQuery, {
         type: 'budgetcode',
         nameColumn: 'budgetcodename',
@@ -117,7 +137,11 @@ router.get('/agency/:agencyid/uoa/:uoaid/responsibilitycenter/:responsibilitycen
       }, (d) => { d.total = parseInt(d.total); });
 
     // send the response with a tile template
-    res.send(data);
+    res.send({
+      id: responsibilitycenterid,
+      name: responsibilitycentername,
+      children,
+    });
   } catch (e) {
     res.status(404).send({
       error: e.toString(),
@@ -130,7 +154,10 @@ router.get('/agency/:agencyid/uoa/:uoaid/responsibilitycenter/:responsibilitycen
   const responsibilitycenterPartial = getResponsibilitycenterPartial(responsibilitycenterid);
 
   try {
-    const data =
+    const { budgetcodename } =
+      await db.one(`SELECT budgetcodename FROM budget_opendata WHERE agencyid = '${agencyid}' AND uoaid = '${uoaid}' ${responsibilitycenterPartial} AND budgetcodeid = '${budgetcodeid}' LIMIT 1`);
+
+    const children =
       await db.each(budgetQuery, {
         type: 'objectclass',
         nameColumn: 'objectclassname',
@@ -141,8 +168,11 @@ router.get('/agency/:agencyid/uoa/:uoaid/responsibilitycenter/:responsibilitycen
         budgetcodePartial: `AND budgetcodeid = '${budgetcodeid}'`,
       }, (d) => { d.total = parseInt(d.total); });
 
-    // send the response with a tile template
-    res.send(data);
+    res.send({
+      id: budgetcodeid,
+      name: budgetcodename,
+      children,
+    });
   } catch (e) {
     res.status(404).send({
       error: e.toString(),
