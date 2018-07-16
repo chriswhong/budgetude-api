@@ -17,6 +17,7 @@ FROM (
     objectclassid,
     adopted_budget_amount
   FROM budget_opendata
+  WHERE
   ${agencyPartial^}
   ${uoaPartial^}
   ${responsibilitycenterPartial^}

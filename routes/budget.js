@@ -23,6 +23,7 @@ function sql(file) {
   return new pgp.QueryFile(fullPath, { minify: true });
 }
 // import sql query templates
+const parentQuery = sql('../queries/parent.sql');
 const budgetQuery = sql('../queries/budget.sql');
 /* GET / */
 router.get('/', async (req, res) => {
@@ -32,7 +33,7 @@ router.get('/', async (req, res) => {
         type: 'agency',
         nameColumn: 'agencyname',
         idColumn: 'agencyid',
-        agencyPartial: 'WHERE true',
+        agencyPartial: 'true',
         uoaPartial: '',
         responsibilitycenterPartial: '',
         budgetcodePartial: '',
@@ -53,18 +54,23 @@ router.get('/', async (req, res) => {
 
 router.get('/agency/:agencyid', async (req, res) => {
   const { agencyid } = req.params;
-  console.log(agencyid, typeof(agencyid))
 
   try {
-    const { agencyname } =
-      await db.one(`SELECT agencyname FROM budget_opendata WHERE agencyid = '${agencyid}' LIMIT 1`);
+    const { name, total } =
+      await db.one(parentQuery, {
+        nameColumn: 'agencyname',
+        agencyPartial: `agencyid = '${agencyid}'`,
+        uoaPartial: '',
+        responsibilitycenterPartial: '',
+        budgetcodePartial: '',
+      });
 
     const children =
       await db.each(budgetQuery, {
         type: 'uoa',
         nameColumn: 'uoaname',
         idColumn: 'uoaid',
-        agencyPartial: `WHERE agencyid = '${agencyid}'`,
+        agencyPartial: `agencyid = '${agencyid}'`,
         uoaPartial: '',
         responsibilitycenterPartial: '',
         budgetcodePartial: '',
@@ -73,7 +79,8 @@ router.get('/agency/:agencyid', async (req, res) => {
     // send the response with a tile template
     res.send({
       id: agencyid,
-      name: agencyname,
+      name,
+      total,
       children,
     });
   } catch (e) {
@@ -87,15 +94,21 @@ router.get('/agency/:agencyid/uoa/:uoaid', async (req, res) => {
   const { agencyid, uoaid } = req.params;
 
   try {
-    const { uoaname } =
-      await db.one(`SELECT uoaname FROM budget_opendata WHERE agencyid = '${agencyid}' AND uoaid = '${uoaid}' LIMIT 1`);
+    const { name, total } =
+      await db.one(parentQuery, {
+        nameColumn: 'uoaname',
+        agencyPartial: `agencyid = '${agencyid}'`,
+        uoaPartial: `AND uoaid = '${uoaid}'`,
+        responsibilitycenterPartial: '',
+        budgetcodePartial: '',
+      });
 
     const children =
       await db.each(budgetQuery, {
         type: 'responsibilitycenter',
         nameColumn: 'responsibilitycentername',
         idColumn: 'responsibilitycenterid',
-        agencyPartial: `WHERE agencyid = '${agencyid}'`,
+        agencyPartial: `agencyid = '${agencyid}'`,
         uoaPartial: `AND uoaid = '${uoaid}'`,
         responsibilitycenterPartial: '',
         budgetcodePartial: '',
@@ -103,7 +116,8 @@ router.get('/agency/:agencyid/uoa/:uoaid', async (req, res) => {
 
     res.send({
       id: uoaid,
-      name: uoaname,
+      name,
+      total,
       children,
     });
   } catch (e) {
@@ -125,12 +139,21 @@ router.get('/agency/:agencyid/uoa/:uoaid/responsibilitycenter/:responsibilitycen
     const { responsibilitycentername } =
       await db.one(`SELECT responsibilitycentername FROM budget_opendata WHERE agencyid = '${agencyid}' AND uoaid = '${uoaid}' ${responsibilitycenterPartial} LIMIT 1`);
 
+    const { name, total } =
+      await db.one(parentQuery, {
+        nameColumn: 'responsibilitycentername',
+        agencyPartial: `agencyid = '${agencyid}'`,
+        uoaPartial: `AND uoaid = '${uoaid}'`,
+        responsibilitycenterPartial,
+        budgetcodePartial: '',
+      });
+
     const children =
       await db.each(budgetQuery, {
         type: 'budgetcode',
         nameColumn: 'budgetcodename',
         idColumn: 'budgetcodeid',
-        agencyPartial: `WHERE agencyid = '${agencyid}'`,
+        agencyPartial: `agencyid = '${agencyid}'`,
         uoaPartial: `AND uoaid = '${uoaid}'`,
         responsibilitycenterPartial,
         budgetcodePartial: '',
@@ -139,7 +162,8 @@ router.get('/agency/:agencyid/uoa/:uoaid/responsibilitycenter/:responsibilitycen
     // send the response with a tile template
     res.send({
       id: responsibilitycenterid,
-      name: responsibilitycentername,
+      name,
+      total,
       children,
     });
   } catch (e) {
@@ -154,15 +178,21 @@ router.get('/agency/:agencyid/uoa/:uoaid/responsibilitycenter/:responsibilitycen
   const responsibilitycenterPartial = getResponsibilitycenterPartial(responsibilitycenterid);
 
   try {
-    const { budgetcodename } =
-      await db.one(`SELECT budgetcodename FROM budget_opendata WHERE agencyid = '${agencyid}' AND uoaid = '${uoaid}' ${responsibilitycenterPartial} AND budgetcodeid = '${budgetcodeid}' LIMIT 1`);
+    const { name, total } =
+      await db.one(parentQuery, {
+        nameColumn: 'budgetcodename',
+        agencyPartial: `agencyid = '${agencyid}'`,
+        uoaPartial: `AND uoaid = '${uoaid}'`,
+        responsibilitycenterPartial,
+        budgetcodePartial: `AND budgetcodeid = '${budgetcodeid}'`,
+      });
 
     const children =
       await db.each(budgetQuery, {
         type: 'objectclass',
         nameColumn: 'objectclassname',
         idColumn: 'objectclassid',
-        agencyPartial: `WHERE agencyid = '${agencyid}'`,
+        agencyPartial: `agencyid = '${agencyid}'`,
         uoaPartial: `AND uoaid = '${uoaid}'`,
         responsibilitycenterPartial,
         budgetcodePartial: `AND budgetcodeid = '${budgetcodeid}'`,
@@ -170,7 +200,8 @@ router.get('/agency/:agencyid/uoa/:uoaid/responsibilitycenter/:responsibilitycen
 
     res.send({
       id: budgetcodeid,
-      name: budgetcodename,
+      name,
+      total,
       children,
     });
   } catch (e) {
