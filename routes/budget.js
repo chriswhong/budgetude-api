@@ -28,6 +28,8 @@ const budgetQuery = sql('../queries/budget.sql');
 /* GET / */
 router.get('/', async (req, res) => {
   try {
+    const { total } = await db.one(`SELECT SUM(adopted_budget_amount)::numeric as total FROM budget_opendata WHERE publicationdate = '20180614'`)
+
     const children =
       await db.each(budgetQuery, {
         type: 'agency',
@@ -43,6 +45,7 @@ router.get('/', async (req, res) => {
     res.send({
       id: 0,
       name: 'New York City',
+      total,
       children,
     });
   } catch (e) {
